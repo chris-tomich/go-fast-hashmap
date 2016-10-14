@@ -2,6 +2,7 @@ package go_fast_hashmap
 
 import (
 	"math"
+	"github.com/OneOfOne/xxhash"
 )
 
 // This appears to be a pretty popular load factor figure (taken from a mixture of the Go built-in map, Mono, and .NET Core)
@@ -59,13 +60,16 @@ func findHashmapPrimeSize(size uint64) uint64 {
 }
 
 type bucket struct {
-	Key []byte
-	Value interface{}
+	Key string
+	Value string
 	Next *bucket
 }
 
 type Hashmap struct {
 	buckets []*bucket
+	bSize   uint64
+
+	hasher  *xxhash.XXHash64
 }
 
 func New(size uint64) *Hashmap {
@@ -73,15 +77,67 @@ func New(size uint64) *Hashmap {
 
 	m := &Hashmap{
 		buckets: make([]*bucket, bSize),
+		bSize: bSize,
+		hasher: xxhash.New64(),
 	}
 
 	return m
 }
 
-//func (m *Hashmap) Get(key []byte) (interface{}, bool) {
-//
-//}
-//
-//func (m *Hashmap) Set(key []byte, value interface{}) {
-//
-//}
+func findMatchingKeyOrLastBucket(key string, b *bucket) (*bucket, bool) {
+	if b == nil {
+		return nil, false
+	} else if b.Next == nil {
+		return b, false
+	} else if b.Key == key {
+		return b, true
+	} else {
+		return findMatchingKeyOrLastBucket(key, b.Next)
+	}
+}
+
+func (m *Hashmap) Get(key string) (string, bool) {
+	m.hasher.Reset()
+	m.hasher.WriteString(key)
+	h := m.hasher.Sum64()
+
+	index := h % m.bSize
+
+	b := m.buckets[index]
+
+	last, isMatching := findMatchingKeyOrLastBucket(key, b)
+
+	if isMatching {
+		return last.Value, true
+	} else {
+		return "", false
+	}
+}
+
+func (m *Hashmap) Set(key string, value string) {
+	m.hasher.Reset()
+	m.hasher.WriteString(key)
+	h := m.hasher.Sum64()
+
+	index := h % m.bSize
+
+	b := m.buckets[index]
+
+	if b == nil {
+		m.buckets[index] = &bucket{
+			Key: key,
+			Value: value,
+		}
+	} else {
+		last, isMatching := findMatchingKeyOrLastBucket(key, b)
+
+		if isMatching {
+			last.Value = value
+		} else {
+			last.Next = &bucket{
+				Key: key,
+				Value: value,
+			}
+		}
+	}
+}
