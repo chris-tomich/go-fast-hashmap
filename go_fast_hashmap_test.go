@@ -87,10 +87,10 @@ func GetTwoMatchingSizedSets(size int) ([]string, []string) {
 func BenchmarkBuiltInMatchingSizedSets(b *testing.B) {
 	largeSet, smallSet := GetTwoMatchingSizedSets(100000)
 
-	largeSetMap := make(map[string]int, 100000)
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		largeSetMap := make(map[string]int, 100000)
+
 		for i, word := range largeSet {
 			largeSetMap[word] = i
 		}
@@ -108,10 +108,10 @@ func BenchmarkBuiltInMatchingSizedSets(b *testing.B) {
 func BenchmarkFastHashmapMatchingSizedSets(b *testing.B) {
 	largeSet, smallSet := GetTwoMatchingSizedSets(100000)
 
-	largeSetMap := New(100000)
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		largeSetMap := New(100000)
+		
 		for _, word := range largeSet {
 			largeSetMap.Set(word, word)
 		}
