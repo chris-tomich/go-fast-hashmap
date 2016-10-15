@@ -59,10 +59,16 @@ func findHashmapPrimeSize(size uint64) uint64 {
 	return largePrime
 }
 
+type keyValuePair struct {
+	Key   string
+	Value int
+}
+
+const BucketSize = 3
+
 type bucket struct {
-	Key string
-	Value string
-	Next *bucket
+	pairs [BucketSize]keyValuePair
+	count int
 }
 
 type Hashmap struct {
@@ -81,56 +87,58 @@ func New(size uint64) *Hashmap {
 	return m
 }
 
-func (m *Hashmap) findMatchingKeyOrLastBucket(key string, i uint64) (*bucket, bool) {
-	n := &(m.buckets[i])
-
-	for n.Key != key {
-		if n.Next == nil {
-			return n, false
-		} else {
-			n = n.Next
-		}
-	}
-
-	return n, true
-}
-
-func (m *Hashmap) Get(key string) (string, bool) {
+func (m *Hashmap) findMatchingKeyOrNextKeyValuePair(key string) (*keyValuePair, bool) {
 	h := xxhash.ChecksumString64(key)
 
-	index := h % m.bSize
+	i := h % m.bSize
 
-	if m.buckets[index].Key == "" {
-		return "", false
-	}
+	b := &(m.buckets[i])
 
-	last, isMatching := m.findMatchingKeyOrLastBucket(key, index)
-
-	if isMatching {
-		return last.Value, true
-	} else {
-		return "", false
-	}
-}
-
-func (m *Hashmap) Set(key string, value string) {
-	h := xxhash.ChecksumString64(key)
-
-	index := h % m.bSize
-
-	if m.buckets[index].Key == "" {
-		m.buckets[index].Key = key
-		m.buckets[index].Value = value
-	} else {
-		last, isMatching := m.findMatchingKeyOrLastBucket(key, index)
-
-		if isMatching {
-			last.Value = value
-		} else {
-			last.Next = &bucket{
-				Key: key,
-				Value: value,
+	for {
+		for j := 0; j < b.count; j++ {
+			if b.pairs[j].Key == key {
+				return &(b.pairs[j]), true
 			}
 		}
+
+		switch {
+		case b.count < BucketSize:
+			j := b.count
+			b.count++
+			return &(b.pairs[j]), false
+
+		default:
+			r := m.bSize - i
+
+			if r > (m.bSize / 2) {
+				step := h % r
+				i += step
+			} else {
+				step := h % i
+				i -= step
+			}
+			b = &(m.buckets[i])
+		}
+	}
+}
+
+func (m *Hashmap) Get(key string) (int, bool) {
+	keyValuePair, isMatching := m.findMatchingKeyOrNextKeyValuePair(key)
+
+	if isMatching {
+		return keyValuePair.Value, true
+	} else {
+		return 0, false
+	}
+}
+
+func (m *Hashmap) Set(key string, value int) {
+	keyValuePair, isMatching := m.findMatchingKeyOrNextKeyValuePair(key)
+
+	if isMatching {
+		keyValuePair.Value = value
+	} else {
+		keyValuePair.Key = key
+		keyValuePair.Value = value
 	}
 }
