@@ -6,15 +6,16 @@ import (
 	"time"
 	"strconv"
 	"fmt"
+	"github.com/OneOfOne/xxhash"
 )
 
 func TestGoFastHashmap(t *testing.T) {
 	m := New(10)
 
-	m.Set("A", "a")
-	m.Set("B", "b")
-	m.Set("C", "c")
-	m.Set("D", "d")
+	m.Set("A", 0)
+	m.Set("B", 1)
+	m.Set("C", 2)
+	m.Set("D", 3)
 
 	fmt.Println(m.Get("A"))
 	fmt.Println(m.Get("B"))
@@ -105,15 +106,38 @@ func BenchmarkBuiltInMatchingSizedSets(b *testing.B) {
 	}
 }
 
+func BenchmarkHash(b *testing.B) {
+	largeSet, _ := GetTwoMatchingSizedSets(100000)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, word := range largeSet {
+			xxhash.ChecksumString64(word)
+		}
+	}
+}
+
+func BenchmarkHashWithMod(b *testing.B) {
+	largeSet, _ := GetTwoMatchingSizedSets(100000)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, word := range largeSet {
+			h := xxhash.ChecksumString64(word)
+			h = h % 175003
+		}
+	}
+}
+
 func BenchmarkFastHashmapMatchingSizedSets(b *testing.B) {
 	largeSet, smallSet := GetTwoMatchingSizedSets(100000)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		largeSetMap := New(100000)
-		
-		for _, word := range largeSet {
-			largeSetMap.Set(word, word)
+
+		for i, word := range largeSet {
+			largeSetMap.Set(word, i)
 		}
 
 		newSet := make([]string, 0, len(smallSet))
