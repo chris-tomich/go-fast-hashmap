@@ -66,7 +66,7 @@ type bucket struct {
 }
 
 type Hashmap struct {
-	buckets []*bucket
+	buckets []bucket
 	bSize   uint64
 }
 
@@ -74,27 +74,25 @@ func New(size uint64) *Hashmap {
 	bSize := findHashmapPrimeSize(size)
 
 	m := &Hashmap{
-		buckets: make([]*bucket, bSize),
+		buckets: make([]bucket, bSize),
 		bSize: bSize,
 	}
 
 	return m
 }
 
-func findMatchingKeyOrLastBucket(key string, b *bucket) (*bucket, bool) {
-	n := b
+func (m *Hashmap) findMatchingKeyOrLastBucket(key string, i uint64) (*bucket, bool) {
+	n := &(m.buckets[i])
 
-	for n != nil {
-		if n.Key == key {
-			return n, true
-		} else if n.Next == nil {
+	for n.Key != key {
+		if n.Next == nil {
 			return n, false
 		} else {
 			n = n.Next
 		}
 	}
 
-	return nil, false
+	return n, true
 }
 
 func (m *Hashmap) Get(key string) (string, bool) {
@@ -102,9 +100,11 @@ func (m *Hashmap) Get(key string) (string, bool) {
 
 	index := h % m.bSize
 
-	b := m.buckets[index]
+	if m.buckets[index].Key == "" {
+		return "", false
+	}
 
-	last, isMatching := findMatchingKeyOrLastBucket(key, b)
+	last, isMatching := m.findMatchingKeyOrLastBucket(key, index)
 
 	if isMatching {
 		return last.Value, true
@@ -118,15 +118,11 @@ func (m *Hashmap) Set(key string, value string) {
 
 	index := h % m.bSize
 
-	b := m.buckets[index]
-
-	if b == nil {
-		m.buckets[index] = &bucket{
-			Key: key,
-			Value: value,
-		}
+	if m.buckets[index].Key == "" {
+		m.buckets[index].Key = key
+		m.buckets[index].Value = value
 	} else {
-		last, isMatching := findMatchingKeyOrLastBucket(key, b)
+		last, isMatching := m.findMatchingKeyOrLastBucket(key, index)
 
 		if isMatching {
 			last.Value = value
