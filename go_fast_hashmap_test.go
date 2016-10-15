@@ -41,8 +41,8 @@ func MakeWord(maxSize int) string {
 
 	wordSize := r.Intn(maxSize);
 
-	if wordSize < 3 {
-		wordSize = 3
+	if wordSize < 30 {
+		wordSize = 30
 	}
 
 	isAlpha := r.Intn(10) >= 3
@@ -66,7 +66,7 @@ func GetTwoMatchingSizedSets(size int) ([]string, []string) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for i := 0; i < size; i++ {
-		bagOfWords = append(bagOfWords, MakeWord(10))
+		bagOfWords = append(bagOfWords, MakeWord(150))
 	}
 
 	wordSubSetLen := len(bagOfWords)
@@ -77,7 +77,7 @@ func GetTwoMatchingSizedSets(size int) ([]string, []string) {
 		if (i % 5) == 0 {
 			wordSubSet[i] = bagOfWords[r.Intn(len(bagOfWords))]
 		} else {
-			wordSubSet[i] = MakeWord(10)
+			wordSubSet[i] = MakeWord(150)
 		}
 	}
 

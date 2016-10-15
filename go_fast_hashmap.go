@@ -11,7 +11,7 @@ const loadFactor float64 = 0.7
 var primeBasedSizes = []uint64{
 									11, 101, 211, 503, 1009, 1511, 2003, 3511, 5003, 7507, 10007, 15013, 20011,
 									25013, 50021, 75011, 100003, 125003, 150001, 175003, 200003, 350003, 500009,
-									750019, 1000003, 1250003, 1750009, 1500007, 2000003, 3500017, 5000011, 7500013,
+									750019, 1000003, 1250003, 1500007, 1750009, 2000003, 3500017, 5000011, 7500013,
 									10000019,
 								}
 
@@ -68,8 +68,6 @@ type bucket struct {
 type Hashmap struct {
 	buckets []*bucket
 	bSize   uint64
-
-	hasher  *xxhash.XXHash64
 }
 
 func New(size uint64) *Hashmap {
@@ -78,28 +76,29 @@ func New(size uint64) *Hashmap {
 	m := &Hashmap{
 		buckets: make([]*bucket, bSize),
 		bSize: bSize,
-		hasher: xxhash.New64(),
 	}
 
 	return m
 }
 
 func findMatchingKeyOrLastBucket(key string, b *bucket) (*bucket, bool) {
-	if b == nil {
-		return nil, false
-	} else if b.Next == nil {
-		return b, false
-	} else if b.Key == key {
-		return b, true
-	} else {
-		return findMatchingKeyOrLastBucket(key, b.Next)
+	n := b
+
+	for n != nil {
+		if n.Key == key {
+			return n, true
+		} else if n.Next == nil {
+			return n, false
+		} else {
+			n = n.Next
+		}
 	}
+
+	return nil, false
 }
 
 func (m *Hashmap) Get(key string) (string, bool) {
-	m.hasher.Reset()
-	m.hasher.WriteString(key)
-	h := m.hasher.Sum64()
+	h := xxhash.ChecksumString64(key)
 
 	index := h % m.bSize
 
@@ -115,9 +114,7 @@ func (m *Hashmap) Get(key string) (string, bool) {
 }
 
 func (m *Hashmap) Set(key string, value string) {
-	m.hasher.Reset()
-	m.hasher.WriteString(key)
-	h := m.hasher.Sum64()
+	h := xxhash.ChecksumString64(key)
 
 	index := h % m.bSize
 
