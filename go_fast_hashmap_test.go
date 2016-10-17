@@ -6,7 +6,7 @@ import (
 	"time"
 	"strconv"
 	"fmt"
-	"github.com/OneOfOne/xxhash"
+	"github.com/chris-tomich/xxhash"
 )
 
 func TestGoFastHashmap(t *testing.T) {
@@ -23,18 +23,18 @@ func TestGoFastHashmap(t *testing.T) {
 	fmt.Println(m.Get("D"))
 }
 
-func BenchmarkFindNextPrime(b *testing.B) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		testNum := uint64(r.Int63n(int64(100000000)))
-		b.StartTimer()
-
-		nextPrime(testNum)
-	}
-}
+//func BenchmarkFindNextPrime(b *testing.B) {
+//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+//
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		b.StopTimer()
+//		testNum := uint64(r.Int63n(int64(100000000)))
+//		b.StartTimer()
+//
+//		nextPrime(testNum)
+//	}
+//}
 
 func MakeWord(maxSize int) string {
 	var letters = [...]string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
@@ -106,46 +106,67 @@ func BenchmarkBuiltInMatchingSizedSets(b *testing.B) {
 	}
 }
 
-func BenchmarkHash(b *testing.B) {
-	largeSet, _ := GetTwoMatchingSizedSets(100000)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for _, word := range largeSet {
-			xxhash.ChecksumString64(word)
-		}
-	}
-}
-
-func BenchmarkHashWithMod(b *testing.B) {
-	largeSet, _ := GetTwoMatchingSizedSets(100000)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for _, word := range largeSet {
-			h := xxhash.ChecksumString64(word)
-			h = h % 175003
-		}
-	}
-}
-
-func BenchmarkFastHashmapMatchingSizedSets(b *testing.B) {
+func BenchmarkBuiltInCustomHashMatchingSizedSets(b *testing.B) {
 	largeSet, smallSet := GetTwoMatchingSizedSets(100000)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		largeSetMap := New(100000)
+		largeSetMap := make(map[uint64]int, 100000)
 
 		for i, word := range largeSet {
-			largeSetMap.Set(word, i)
+			largeSetMap[xxhash.Checksum64([]byte(word))] = i
 		}
 
 		newSet := make([]string, 0, len(smallSet))
 
 		for _, word := range smallSet {
-			if _, ok := largeSetMap.Get(word); ok {
+			if _, ok := largeSetMap[xxhash.Checksum64([]byte(word))]; ok {
 				newSet = append(newSet, word)
 			}
 		}
 	}
 }
+
+//func BenchmarkHash(b *testing.B) {
+//	largeSet, _ := GetTwoMatchingSizedSets(100000)
+//
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		for _, word := range largeSet {
+//			xxhash.ChecksumString64(word)
+//		}
+//	}
+//}
+//
+//func BenchmarkHashWithMod(b *testing.B) {
+//	largeSet, _ := GetTwoMatchingSizedSets(100000)
+//
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		for _, word := range largeSet {
+//			h := xxhash.ChecksumString64(word)
+//			h = h % 175003
+//		}
+//	}
+//}
+//
+//func BenchmarkFastHashmapMatchingSizedSets(b *testing.B) {
+//	largeSet, smallSet := GetTwoMatchingSizedSets(100000)
+//
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		largeSetMap := New(100000)
+//
+//		for i, word := range largeSet {
+//			largeSetMap.Set(word, i)
+//		}
+//
+//		newSet := make([]string, 0, len(smallSet))
+//
+//		for _, word := range smallSet {
+//			if _, ok := largeSetMap.Get(word); ok {
+//				newSet = append(newSet, word)
+//			}
+//		}
+//	}
+//}
